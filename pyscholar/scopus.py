@@ -461,6 +461,7 @@ def search_author(list_scopus_id_author):
 
     """
     fields = "?field=dc:identifier,given-name,surname,h-index,coauthor-count,document-count"
+    #alias = "?alias=true"
     dict_authors=dict()
     if isinstance(list_scopus_id_author, str):
         list_scopus_id_author=[list_scopus_id_author]
@@ -469,12 +470,33 @@ def search_author(list_scopus_id_author):
         searchQuery = str(id_author)
         resp = requests.get(search_api_author_id_url+searchQuery+fields, headers=headers)
         if resp.status_code != 200:
+            print id_author
             raise Scopus_Exception(resp)
         data=resp.json()
+        
+        #data=data['author-retrieval-response']
+        if 'alias' in data['author-retrieval-response']:
+            prism = data['author-retrieval-response']['alias']['prism:url']
+            print "prism", prism
+            resp = requests.get(prism+fields, headers=headers)
+            if resp.status_code != 200:
+                print id_author
+                raise Scopus_Exception(resp)
+            data=resp.json()
+        #return data
+        #try:
         data=data['author-retrieval-response'][0]
-        attributes={'name':data['preferred-name']['given-name'],
+        #except:
+        #    print id_author
+        #    print data
+        #    raise
+        try:
+            attributes={'name':data['preferred-name']['given-name'],
         'surname':data['preferred-name']['surname'],'h-index':int(data['h-index']),'coauthor-count':int(data['coauthor-count']),'document-count':int(data['coredata']['document-count'])}
-        dict_authors[id_author]=attributes
+            dict_authors[id_author]=attributes
+        except:
+            print data
+            raise
     return dict_authors
 
 def get_coauthors(id_author,min_year="",max_year="",dict_knowledge=dict()):
@@ -739,6 +761,7 @@ def get_ids_authors_by_id_paper(list_scopus_id_paper):
         searchQuery = str(id_paper)
         resp = requests.get(search_api_abstract_url+searchQuery+fields, headers=headers)
         if resp.status_code != 200:
+            print "While searching for id", id_paper
             raise Scopus_Exception(resp)
 
         id_authors=[]
@@ -925,7 +948,7 @@ def get_cache_papers_by_authorid():
     """
     return scopus_papers_by_authorid_cache
 
-def find_author_scopus_id_by_name(firstName="", lastName=""):
+def find_author_scopus_id_by_name(firstName="", lastName="", areas=[]):
     """
     Searches for an author scopus id given its name.
     """
@@ -937,10 +960,12 @@ def find_author_scopus_id_by_name(firstName="", lastName=""):
         if firstName:
             searchQuery += " AND "
         searchQuery += "AUTHLASTNAME(%s)" % (lastName)
+    if len(areas):
+        searchQuery += " AND SUBJAREA(%s)" % " OR ".join(areas)
 
     #print searchQuery
 
-    fields = "&field=identifier"
+    fields = "&field=dc:identifier"
     resp = requests.get(search_api_author_url+searchQuery+fields, headers=headers)
 
     if resp.status_code != 200:
@@ -963,6 +988,13 @@ def find_author_scopus_id_by_name(firstName="", lastName=""):
     for entry in data['entry']:
         authorId = entry['dc:identifier'].split(':')
         ids.append(authorId[1])
+
+    # if len(ids) > 1:
+    #     #We filter by area
+    #     #fields = 
+    #     for i in ids:
+    #         author = requests.get(search_api_author_id_url+i+fields, headers=headers)
+
 
     return ids
 
@@ -1006,3 +1038,21 @@ def get_author_affiliations(firstName="", lastName=""):
             affiliations.append(entry['affiliation-current'])
                                                                                                                       
     return affiliations
+
+def get_raw_id(ID, view = "?view=metrics"):
+    searchQuery = "query=AU-ID(%s)"%ID
+    fields = "?field=dc:identifier"
+    #resp = requests.get("http://api.elsevier.com/content/author/author_id/36930207700", headers=headers)
+    #resp = requests.get("http://api.elsevier.com/content/author/author_id/55434098600", headers=headers)
+    #resp = requests.get("http://api.elsevier.com/content/author/author_id/35501106500", headers=headers)
+    
+    
+    resp = requests.get("http://api.elsevier.com/content/author/author_id/"+ID+view, headers=headers)
+    #resp = requests.get(search_api_author_url+searchQuery, headers=headers)
+   
+    if resp.status_code != 200:
+       raise Scopus_Exception(resp)
+    print resp
+    data = resp.json()
+    return data
+

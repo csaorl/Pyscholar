@@ -1,7 +1,4 @@
 from setuptools import setup, find_packages
-import ConfigParser
-import sys
-import os
 
 def readme():
     with open('README.rst') as f:
@@ -12,7 +9,7 @@ setup(name='pyscholar',
       description='A python library to access academic APIs',
       url='http://rfabila.github.io/Pyscholar/',
       author='DesarrolloDeSoftware',
-      author_email='rfabila@math.cinvestav.edu.mx',
+      author_email='ruyfabila@math.cinvestav.edu.mx',
       license='GNU',
       packages=find_packages(),
       install_requires=[
